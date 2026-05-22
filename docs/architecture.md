@@ -1,8 +1,3 @@
-# Architecture
+# Nexoryx_Kafka_Platform Architecture
 
-Clients -> Kafka UI -> Kafka Brokers
-
-Integrated:
-- Schema Registry
-- Prometheus
-- Grafana
+Production-grade infrastructure automation.
