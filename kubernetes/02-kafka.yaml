@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kafka
+  namespace: nexoryx-kafka
+spec:
+  serviceName: kafka
+  replicas: 3
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      containers:
+      - name: kafka
+        image: bitnami/kafka:3.8
+        ports:
+        - containerPort: 9092
+        - containerPort: 9093
+        env:
+        - name: KAFKA_CFG_NODE_ID
+          value: "0"
+        - name: KAFKA_KRAFT_CLUSTER_ID
+          valueFrom:
+            secretKeyRef:
+              name: kafka-secrets
+              key: KAFKA_CLUSTER_ID
+        - name: KAFKA_CFG_PROCESS_ROLES
+          value: broker,controller
+        - name: KAFKA_CFG_CONTROLLER_LISTENER_NAMES
+          value: CONTROLLER
+        - name: KAFKA_CFG_LISTENERS
+          value: PLAINTEXT://:9092,CONTROLLER://:9093
+        - name: KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP
+          value: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+        - name: KAFKA_CFG_CONTROLLER_QUORUM_VOTERS
+          value: 0@kafka-0.kafka:9093,1@kafka-1.kafka:9093,2@kafka-2.kafka:9093
+        volumeMounts:
+        - mountPath: /bitnami/kafka
+          name: kafka-storage
+        readinessProbe:
+          tcpSocket:
+            port: 9092
+          initialDelaySeconds: 30
+        livenessProbe:
+          tcpSocket:
+            port: 9092
+          initialDelaySeconds: 60
+  volumeClaimTemplates:
+  - metadata:
+      name: kafka-storage
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 100Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+  namespace: nexoryx-kafka
+spec:
+  clusterIP: None
+  selector:
+    app: kafka
+  ports:
+  - name: kafka
+    port: 9092
+  - name: controller
+    port: 9093
